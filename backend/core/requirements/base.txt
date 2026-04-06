@@ -1,0 +1,5 @@
+django==6.0.3
+django-allauth[headless]
+djangorestframework
+django-cors-headers
+psycopg[binary]

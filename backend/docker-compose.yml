@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: ${COMPOSE_PROJECT_NAME}_db
+    environment:
+      POSTGRES_USER: django
+      POSTGRES_PASSWORD: django
+      POSTGRES_DB: django_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web.local
+    container_name: ${COMPOSE_PROJECT_NAME}_web
+    command: sh -c "python core/manage.py makemigrations && python core/manage.py migrate && python core/manage.py runserver 0.0.0.0:8000"
+    env_file: .env
+    volumes:
+      - .:/app
+      - /app/env
+    ports:
+      - "${WEB_PORT:-8001}:8000"
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
