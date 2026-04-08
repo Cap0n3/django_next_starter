@@ -27,5 +27,25 @@ services:
       - db
     restart: unless-stopped
 
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.local
+    container_name: ${COMPOSE_PROJECT_NAME}_frontend
+    command: pnpm dev --hostname 0.0.0.0
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:${WEB_PORT:-8001}
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - web
+    restart: unless-stopped
+
 volumes:
   postgres_data:

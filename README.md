@@ -21,9 +21,8 @@ The Django side is bootstrapped from [Cap0n3/barebone](https://github.com/Cap0n3
 
 ## Prerequisites
 
-- Docker + Docker Compose (for the backend)
-- Node.js 20+ and **pnpm** (for the frontend — enable via `corepack enable` or `npm i -g pnpm`)
-- `make`
+- Docker + Docker Compose (backend **and** frontend both run in containers)
+- `make`, `curl`
 
 ## Quick start
 
@@ -35,21 +34,16 @@ You have two options.
 ./scripts/bootstrap.sh
 ```
 
-Runs `make setup`, waits for the backend, pings `/api/ping/`, copies `frontend/.env.local`, and starts the frontend dev server. Handles errors gracefully and is safe to re-run.
+Runs `make setup`, waits for the backend at `/api/ping/`, waits for the frontend at `:3000`, and prints next steps. Safe to re-run.
 
-### Option B — Manual (step by step)
+### Option B — Manual
 
 ```bash
-cp backend/.env.example backend/.env         # required — Django reads secrets from here
-# then edit backend/.env and set a real DJANGO_SECRET_KEY, e.g.:
-#   python -c "import secrets; print(secrets.token_urlsafe(50))"
-make setup                                   # backend containers + frontend deps
-curl http://localhost:8001/api/ping/         # sanity check → {"pong": true}
-cp frontend/.env.local.example frontend/.env.local
-make frontend-run                            # starts Next.js on :3000
+cp backend/.env.example backend/.env         # edit DJANGO_SECRET_KEY
+make setup                                   # builds & starts db + backend + frontend
 ```
 
-Use `make backend-run` / `make backend-stop` to control containers afterwards.
+Then open http://localhost:3000. Use `make backend-stop` to stop everything, `make backend-run` / `make frontend-run` to start individual services.
 
 > **Note** — `AUTH_USER_MODEL` is set before the first migration, so the custom `users.User` table is created from scratch. Don't run migrations against an existing barebone DB without resetting it.
 
@@ -66,14 +60,7 @@ Useful Make targets (all run from project root):
 
 Run `make help` to see the full command reference for both stacks.
 
-### 2. Frontend — http://localhost:3000
-
-```bash
-cp frontend/.env.local.example frontend/.env.local
-make frontend-run
-```
-
-Open http://localhost:3000 and click **Ping backend** — you should see `{"pong": true}`. Then sign up, you'll be redirected to `/dashboard` showing your user from `/api/me/`.
+Open http://localhost:3000 and click **Ping backend** — you should see `{"pong": true}`. Sign up and you'll land on `/dashboard` showing your user from `/api/me/`.
 
 ## How auth works
 
@@ -124,6 +111,11 @@ The UI components mirror the shadcn/ui API and structure, so you can drop in rea
 
 ## Caveats
 
-- **Next.js 16** is recent — its `frontend/AGENTS.md` warns about breaking changes vs older docs. If something behaves unexpectedly, check `frontend/node_modules/next/dist/docs/`.
-- The frontend is **not** dockerized in this first pass — keep `make frontend-run` (pnpm) local for fast iteration.
+- **Next.js 16** is recent — check `frontend/node_modules/next/dist/docs/` if something behaves unexpectedly.
+- After adding a frontend dependency, rebuild the image: `docker compose -f backend/docker-compose.yml build frontend && make frontend-run`.
 - Email verification is off, so passwords are the only credential. Don't ship to prod without turning verification on and configuring an SMTP backend.
+
+## Do do list
+
+- [ ] Add auth tests
+- [ ] Add client-side session refresh

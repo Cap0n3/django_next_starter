@@ -1,10 +1,9 @@
 PROJECT_NAME = ./core
 DC := docker compose -f backend/docker-compose.yml
-PNPM := pnpm --dir frontend
 
 .PHONY: setup help \
         backend-run backend-stop backend-build backend-logs backend-shell backend-test backend-lint \
-        frontend-run frontend-build frontend-start frontend-lint frontend-test install \
+        frontend-run frontend-stop frontend-logs frontend-shell frontend-build frontend-start frontend-lint frontend-test install \
         secret app create-superuser docker-bash \
         mkmigs mkmigs-dry migrate migrate-all showmigrations \
         db-backup db-restore db-table db-columns flush sqlflush psql \
@@ -17,16 +16,14 @@ PNPM := pnpm --dir frontend
 setup:
 	@echo "Setting up the project..."
 	@cp -n backend/.env.example backend/.env 2>/dev/null && echo "Created backend/.env from backend/.env.example" || echo "backend/.env already exists, skipping"
-	@echo "Starting backend Docker containers..."
+	@echo "Building and starting all containers (db, web, frontend)..."
 	@$(DC) up -d --build
 	@echo "Waiting for containers to be ready..."
 	@sleep 10
-	@echo "Installing frontend dependencies..."
-	@$(PNPM) install
 	@echo ""
 	@echo "Setup complete! (backend migrations are applied automatically on container start)"
 	@echo "  - Backend:  http://localhost:$${WEB_PORT:-8001}"
-	@echo "  - Frontend: http://localhost:3000 (run 'make frontend-run')"
+	@echo "  - Frontend: http://localhost:$${FRONTEND_PORT:-3000}"
 	@echo ""
 	@echo "Next steps:"
 	@echo "  make create-superuser    Create a Django admin account"
@@ -60,27 +57,39 @@ backend-test:
 backend-lint: ruff
 
 # ==============================================================================
-#  FRONTEND — lifecycle (namespaced)
+#  FRONTEND — lifecycle (dockerized)
 # ==============================================================================
 frontend-run:
-	@echo "Starting frontend dev server..."
-	@$(PNPM) dev
+	@echo "Starting frontend container..."
+	@$(DC) up -d --build frontend
+	@echo "Frontend running at http://localhost:$${FRONTEND_PORT:-3000}"
+
+frontend-stop:
+	@echo "Stopping frontend container..."
+	@$(DC) stop frontend
+
+frontend-logs:
+	@$(DC) logs -f --tail 50 frontend
+
+frontend-shell:
+	@echo "Opening shell in frontend container..."
+	@$(DC) exec frontend sh
 
 frontend-build:
-	@echo "Building frontend..."
-	@$(PNPM) build
+	@echo "Building frontend (next build) inside container..."
+	@$(DC) exec frontend pnpm build
 
 frontend-start:
-	@echo "Starting frontend (production build)..."
-	@$(PNPM) start
+	@echo "Starting frontend (production build) inside container..."
+	@$(DC) exec frontend pnpm start
 
 frontend-lint:
 	@echo "Running frontend lint..."
-	@$(PNPM) lint
+	@$(DC) exec frontend pnpm lint
 
 install:
-	@echo "Installing frontend dependencies..."
-	@$(PNPM) install
+	@echo "Installing frontend dependencies inside container..."
+	@$(DC) exec frontend pnpm install
 
 # ==============================================================================
 #  DJANGO — unambiguous commands (no prefix)
@@ -267,15 +276,18 @@ help:
 	@echo "    djlint-all        djlint all templates"
 	@echo ""
 	@echo "┌──────────────────────────────────────────────────────────────────────────────┐"
-	@echo "│  FRONTEND (Next.js, pnpm)                                                    │"
+	@echo "│  FRONTEND (Next.js, dockerized)                                              │"
 	@echo "└──────────────────────────────────────────────────────────────────────────────┘"
-	@echo "  install             Install frontend dependencies (pnpm)"
-	@echo "  frontend-run        Start Next.js dev server"
-	@echo "  frontend-build      Build production bundle"
+	@echo "  frontend-run        Start frontend container (Next.js dev server)"
+	@echo "  frontend-stop       Stop frontend container"
+	@echo "  frontend-logs       Stream frontend container logs"
+	@echo "  frontend-shell      Open shell in frontend container"
+	@echo "  frontend-build      Build production bundle (next build)"
 	@echo "  frontend-start      Start built frontend"
 	@echo "  frontend-lint       Run eslint"
+	@echo "  install             Install frontend dependencies (pnpm, in container)"
 	@echo ""
 	@echo "──────────────────────────────────────────────────────────────────────────────"
-	@echo "  Backend runs in Docker. Frontend runs locally via pnpm."
+	@echo "  Backend and frontend both run in Docker (dev)."
 	@echo "──────────────────────────────────────────────────────────────────────────────"
 	@echo ""

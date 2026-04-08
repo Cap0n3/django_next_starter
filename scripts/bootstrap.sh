@@ -2,7 +2,8 @@
 #
 # bootstrap.sh — one-shot setup for django_next_starter
 #
-# Runs: make setup → waits for backend → pings /api/ping/ → copies frontend .env.local → starts frontend.
+# Runs: make setup (builds db/web/frontend containers) → waits for backend /api/ping/
+# → copies frontend .env.local → verifies frontend is up.
 # Idempotent: safe to re-run. Exits non-zero on any unrecoverable error.
 
 set -Eeuo pipefail
@@ -41,14 +42,6 @@ done
 if ! docker compose version >/dev/null 2>&1; then
   missing+=("docker compose plugin")
 fi
-if ! command -v pnpm >/dev/null 2>&1; then
-  if command -v corepack >/dev/null 2>&1; then
-    warn "pnpm not found — enabling via corepack"
-    corepack enable >/dev/null 2>&1 || missing+=("pnpm (corepack failed)")
-  else
-    missing+=("pnpm")
-  fi
-fi
 if ((${#missing[@]})); then
   err "Missing required tools: ${missing[*]}"
   err "Install them and re-run ./scripts/bootstrap.sh"
@@ -80,7 +73,7 @@ else
 fi
 
 # ---- run make setup ----------------------------------------------------------
-info "Running 'make setup' (builds backend, installs frontend deps)..."
+info "Running 'make setup' (builds db, backend, and frontend containers)..."
 if ! make setup; then
   err "'make setup' failed. Check output above."
   exit 1
@@ -115,18 +108,33 @@ else
   warn "${FE_EXAMPLE} not found — skipping frontend env copy."
 fi
 
+# ---- wait for frontend -------------------------------------------------------
+FRONTEND_PORT="${FRONTEND_PORT:-3000}"
+FRONTEND_URL="http://localhost:${FRONTEND_PORT}"
+info "Waiting for frontend at ${FRONTEND_URL} ..."
+attempts=60
+until curl -fsS -o /dev/null "${FRONTEND_URL}" 2>&1; do
+  attempts=$((attempts - 1))
+  if (( attempts <= 0 )); then
+    err "Frontend never responded at ${FRONTEND_URL}."
+    err "Try: make frontend-logs"
+    exit 1
+  fi
+  sleep 1
+done
+ok "Frontend reachable at ${FRONTEND_URL}"
+
 # ---- done --------------------------------------------------------------------
 cat <<EOF
 
 ${GREEN}${BOLD}Bootstrap complete!${RESET}
 
   Backend:   http://localhost:${WEB_PORT}
-  Frontend:  http://localhost:3000  (starting now...)
+  Frontend:  ${FRONTEND_URL}
 
-Press Ctrl+C to stop the frontend. Backend keeps running in Docker —
-use 'make backend-stop' to shut it down.
+Both services run in Docker. Useful commands:
+  make backend-logs      Stream backend logs
+  make frontend-logs     Stream frontend logs
+  make backend-stop      Stop all containers
 
 EOF
-
-info "Starting frontend dev server (make frontend-run)..."
-exec make frontend-run
