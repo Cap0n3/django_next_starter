@@ -1,22 +1,30 @@
 services:
   db:
-    image: postgres:latest
+    image: postgres:16
     container_name: ${COMPOSE_PROJECT_NAME}_db
     environment:
-      POSTGRES_USER: django
-      POSTGRES_PASSWORD: django
-      POSTGRES_DB: django_db
+      POSTGRES_USER: ${POSTGRES_USER:-django}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-django}
+      POSTGRES_DB: ${POSTGRES_DB:-django_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "${DB_PORT:-5432}:5432"
+      # Loopback only: the dev password is weak, keep it off the LAN.
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-django} -d ${POSTGRES_DB:-django_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   web:
     build:
       context: .
       dockerfile: Dockerfile.web.local
     container_name: ${COMPOSE_PROJECT_NAME}_web
-    command: sh -c "python core/manage.py makemigrations && python core/manage.py migrate && python core/manage.py runserver 0.0.0.0:8000"
+    # Only `migrate` here. Generate migrations explicitly with `make mkmigs`
+    # so they are reviewed and committed, never auto-created at boot.
+    command: sh -c "python core/manage.py migrate && python core/manage.py runserver 0.0.0.0:8000"
     env_file: .env
     volumes:
       - .:/app
@@ -24,7 +32,8 @@ services:
     ports:
       - "${WEB_PORT:-8001}:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:

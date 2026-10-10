@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 /**
  * Soft route protection based on the Django `sessionid` cookie.
  *
+ * (Next.js 16 renamed `middleware.ts` to `proxy.ts`; same API, Node runtime.)
+ *
  * - PROTECTED routes redirect to /login when the cookie is missing.
  * - GUEST_ONLY routes redirect to /dashboard when the cookie is present.
  *
@@ -13,7 +15,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const PROTECTED = ["/dashboard"];
 const GUEST_ONLY = ["/login", "/signup"];
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const hasSession = req.cookies.has("sessionid");
 

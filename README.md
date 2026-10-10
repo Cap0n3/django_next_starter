@@ -68,7 +68,12 @@ Open http://localhost:3000 and click **Ping backend** — you should see `{"pong
 - [Development guide](docs/development.md) — daily workflow, common tasks, troubleshooting
 - [Environment variables](docs/environment.md) — every env var across backend and frontend
 
-## Do do list
+## Before going to production
 
-- [ ] Add auth tests
+Read [docs/environment.md → Production notes](docs/environment.md#production-notes). In short: set `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`, `FRONTEND_URL`, `DJANGO_COOKIE_DOMAIN` (sibling subdomains), `REDIS_URL` (shared rate limits) and an SMTP `DJANGO_EMAIL_BACKEND`.
+
+## To do
+
+- [x] Add auth tests
+- [ ] Password reset pages on the frontend (`/password/reset`, backend already points there)
 - [ ] Add client-side session refresh

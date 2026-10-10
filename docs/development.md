@@ -65,6 +65,8 @@ This creates `backend/core/core/apps/myapp/`. Register it in `INSTALLED_APPS` (`
 
 ### Run migrations
 
+Containers run `migrate` on start but never `makemigrations` — generate migrations explicitly and commit them:
+
 ```bash
 make mkmigs               # makemigrations
 make mkmigs app=users     # makemigrations for a specific app
@@ -96,6 +98,8 @@ exit
 Components are written to `frontend/components/ui/`. Never hand-write files in that directory.
 
 ### Run tests and linting
+
+Backend tests always use `config.settings.test` (in-memory SQLite, fast hasher) via `--ds` in `pyproject.toml`, regardless of what `.env` sets. They cover the full allauth headless flow (signup, login, logout, email verification) and the DRF endpoints.
 
 ```bash
 make backend-test         # pytest (backend)
@@ -132,6 +136,9 @@ Then `make backend-stop && make backend-run`.
 
 **CORS error in browser console**
 The `FRONTEND_URL` env var in `backend/.env` must match the origin the browser is using. Default is `http://localhost:3000`.
+
+**Verification email — where is it?**
+Dev uses the console email backend: the email (with the `/verify-email/<key>` link) is printed in `make backend-logs`.
 
 **Login works but /api/me/ returns 401**
 Session may have expired or the `sessionid` cookie wasn't sent. Check:

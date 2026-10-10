@@ -1,5 +1,8 @@
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.test"
+# --ds beats the DJANGO_SETTINGS_MODULE env var loaded from .env, so tests
+# always run on the in-memory SQLite test settings, never against Postgres.
+addopts = ["--ds=config.settings.test", "--strict-markers"]
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 
 [tool.ruff]

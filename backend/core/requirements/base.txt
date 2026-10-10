@@ -1,5 +1,6 @@
 django==6.0.3
-django-allauth[headless]
-djangorestframework
-django-cors-headers
-psycopg[binary]
+django-allauth[headless]==65.19.7
+djangorestframework==3.18.3
+django-cors-headers==4.9.0
+psycopg[binary]==3.3.6
+redis==8.1.0

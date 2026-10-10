@@ -9,6 +9,11 @@ Required env vars (in addition to base.py):
   - DJANGO_ALLOWED_HOSTS  (comma-separated)
   - POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_HOST / POSTGRES_PORT
   - FRONTEND_URL          (comma-separated if multiple)
+  - DJANGO_COOKIE_DOMAIN  (e.g. ".example.com" when frontend and API live on
+                           sibling subdomains; see base.py)
+  - REDIS_URL             (shared cache so rate limits hold across workers)
+  - DJANGO_EMAIL_BACKEND + EMAIL_HOST / EMAIL_HOST_USER / EMAIL_HOST_PASSWORD
+                          (verification emails are dropped to stdout otherwise)
 
 Deployment notes:
   - DJANGO_DEBUG must be unset or "0" (enforced below regardless).

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AlertCircleIcon } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { apiFetch, ApiError } from "@/lib/api";
-import { logout } from "@/lib/auth";
+import { formatAuthError, logout } from "@/lib/auth";
 
 interface Me {
   id: number;
@@ -26,6 +28,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     apiFetch<Me>("/api/me/")
@@ -35,15 +38,18 @@ export default function DashboardPage() {
           router.replace("/login");
           return;
         }
-        setError((err as Error).message);
+        setError(formatAuthError(err));
       });
   }, [router]);
 
   async function onLogout() {
+    setLoggingOut(true);
     try {
       await logout();
-    } finally {
       router.replace("/login");
+    } catch (err) {
+      setError(formatAuthError(err));
+      setLoggingOut(false);
     }
   }
 
@@ -54,18 +60,24 @@ export default function DashboardPage() {
           <CardTitle>Dashboard</CardTitle>
           <CardDescription>Authenticated session via Django + Allauth Headless.</CardDescription>
         </CardHeader>
-        <CardContent>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          {!me && !error && <p className="text-sm text-black/60">Loading...</p>}
+        <CardContent className="flex flex-col gap-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircleIcon />
+              <AlertTitle>Something went wrong</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {!me && !error && <p className="text-sm text-muted-foreground">Loading...</p>}
           {me && (
-            <pre className="rounded bg-black/5 p-3 text-xs">
+            <pre className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
               {JSON.stringify(me, null, 2)}
             </pre>
           )}
         </CardContent>
         <CardFooter>
-          <Button variant="destructive" onClick={onLogout}>
-            Log out
+          <Button variant="destructive" onClick={onLogout} disabled={loggingOut}>
+            {loggingOut ? "Logging out..." : "Log out"}
           </Button>
         </CardFooter>
       </Card>

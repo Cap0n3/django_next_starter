@@ -16,8 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { signup, getSession } from "@/lib/auth";
-import { ApiError } from "@/lib/api";
+import { formatAuthError, getSession, signup } from "@/lib/auth";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -36,11 +35,7 @@ export default function SignupPage() {
       await signup({ email, password });
       router.push("/dashboard");
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(JSON.stringify(err.data));
-      } else {
-        setError((err as Error).message);
-      }
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
